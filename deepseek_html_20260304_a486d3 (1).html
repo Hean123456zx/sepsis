@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>脓毒症研究 · 病人信息统计 (含详情查看)</title>
+    <!-- Bootstrap 5 轻量样式 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- FontAwesome 图标 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body { background: #f4f7fc; font-family: 'Segoe UI', Roboto, system-ui; }
+        .form-section { background: white; border-radius: 1rem; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 8px 20px rgba(0,0,0,0.02); border: 1px solid #e9ecef; }
+        .section-title { font-weight: 600; color: #0b3b5c; border-left: 6px solid #0d6efd; padding-left: 1rem; margin-bottom: 1.5rem; font-size: 1.3rem; }
+        .stat-card { background: white; border-radius: 1rem; padding: 1rem; border: 1px solid #dee2e6; transition: 0.2s; }
+        .stat-card:hover { box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.05); }
+        .stat-value { font-size: 2.2rem; font-weight: 700; color: #0d6efd; line-height: 1.2; }
+        .stat-label { color: #6c757d; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.5px; }
+        .table-patient-list { font-size: 0.85rem; }
+        .table-patient-list td { vertical-align: middle; }
+        .btn-outline-primary { border-width: 2px; }
+        .footer-note { font-size: 0.8rem; color: #8a9cb0; text-align: center; margin-top: 2rem; }
+        .checkbox-group label { margin-right: 1.5rem; font-weight: 400; }
+        hr { opacity: 0.3; }
+        /* 详情模态框样式 */
+        .detail-label { font-weight: 600; color: #0b3b5c; background: #f0f4fa; padding: 0.25rem 0.5rem; border-radius: 0.375rem; font-size: 0.9rem; }
+        .detail-value { padding: 0.25rem 0.5rem; border-bottom: 1px dashed #dee2e6; margin-bottom: 0.5rem; }
+        .modal-body { max-height: 70vh; overflow-y: auto; }
+    </style>
+</head>
+<body>
+    <div class="container-fluid py-4">
+        <!-- 标题 -->
+        <div class="d-flex align-items-center justify-content-between mb-4">
+            <h2 class="fw-bold" style="color: #0b3b5c;"><i class="fas fa-notes-medical me-3" style="color:#0d6efd;"></i>脓毒症病例登记 · 统计与详情</h2>
+            <div>
+                <span class="badge bg-primary p-3" id="patientCountBadge">0 位病人</span>
+            </div>
+        </div>
+
+        <!-- 主区域: 左侧表单 / 右侧统计+列表 -->
+        <div class="row g-4">
+            <!-- 左侧：录入表单 (占7/12) -->
+            <div class="col-lg-7">
+                <div class="form-section">
+                    <h5 class="section-title"><i class="far fa-file-alt me-2"></i>新病人录入</h5>
+                    <form id="patientForm">
+                        <!-- ========= 人口统计学 ========= -->
+                        <div class="mb-4">
+                            <h6 class="fw-bold text-secondary"><i class="fas fa-user me-2"></i>A. 人口统计学与基线资料</h6>
+                            <div class="row g-3">
+                                <div class="col-md-4"><label class="form-label">姓名</label><input type="text" class="form-control" name="name" placeholder="姓名或ID"></div>
+                                <div class="col-md-4">
+                                    <label class="form-label d-block">性别</label>
+                                    <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="gender" value="0"><label class="form-check-label">男</label></div>
+                                    <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="gender" value="1"><label class="form-check-label">女</label></div>
+                                </div>
+                                <div class="col-md-4"><label class="form-label">年龄(岁)</label><input type="number" class="form-control" name="age" step="1"></div>
+                                <div class="col-md-4"><label class="form-label">身高(cm)</label><input type="number" class="form-control" name="height" step="0.1"></div>
+                                <div class="col-md-4"><label class="form-label">体重(kg)</label><input type="number" class="form-control" name="weight" step="0.1"></div>
+                                <div class="col-md-4"><label class="form-label">BMI</label><input type="number" class="form-control" name="bmi" step="0.1" placeholder="自动计算或手动"></div>
+                            </div>
+                            <hr>
+                            <!-- 基础疾病 (复选框) -->
+                            <label class="form-label fw-semibold">合并疾病史 (可多选)</label>
+                            <div class="checkbox-group mb-2">
+                                <div class="row">
+                                    <div class="col-sm-6"><div class="form-check"><input class="form-check-input" type="checkbox" name="htn" value="1"><label class="form-check-label">高血压</label></div></div>
+                                    <div class="col-sm-6"><div class="form-check"><input class="form-check-input" type="checkbox" name="dm" value="1"><label class="form-check-label">糖尿病</label></div></div>
+                                    <div class="col-sm-6"><div class="form-check"><input class="form-check-input" type="checkbox" name="copd" value="1"><label class="form-check-label">COPD</label></div></div>
+                                    <div class="col-sm-6"><div class="form-check"><input class="form-check-input" type="checkbox" name="asthma" value="1"><label class="form-check-label">哮喘</label></div></div>
+                                    <div class="col-sm-6"><div class="form-check"><input class="form-check-input" type="checkbox" name="ckd" value="1"><label class="form-check-label">慢性肾病</label></div></div>
+                                    <div class="col-sm-6"><div class="form-check"><input class="form-check-input" type="checkbox" name="malignancy" value="1"><label class="form-check-label">恶性肿瘤</label></div></div>
+                                    <div class="col-sm-6"><div class="form-check"><input class="form-check-input" type="checkbox" name="cvd" value="1"><label class="form-check-label">脑血管疾病</label></div></div>
+                                    <div class="col-sm-6"><div class="form-check"><input class="form-check-input" type="checkbox" name="immuno" value="1"><label class="form-check-label">免疫抑制状态</label></div></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ========= 脓毒症诊断 ========= -->
+                        <div class="mb-4">
+                            <h6 class="fw-bold text-secondary"><i class="fas fa-diagnoses me-2"></i>B. 脓毒症诊断与入组特征</h6>
+                            <label class="form-label fw-semibold">感染部位 (可多选)</label>
+                            <div class="checkbox-group row mb-2">
+                                <div class="col-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="inf_lung" value="1"><label>肺部</label></div></div>
+                                <div class="col-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="inf_abdo" value="1"><label>腹腔</label></div></div>
+                                <div class="col-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="inf_urinary" value="1"><label>泌尿系统</label></div></div>
+                                <div class="col-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="inf_blood" value="1"><label>血流感染</label></div></div>
+                                <div class="col-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="inf_skin" value="1"><label>皮肤软组织</label></div></div>
+                                <div class="col-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="inf_cns" value="1"><label>中枢神经</label></div></div>
+                                <div class="col-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="inf_other" value="1"><label>其他</label></div></div>
+                            </div>
+                            <div class="row g-2 mb-2">
+                                <div class="col-md-6"><label class="form-label">其他感染部位详述</label><input type="text" class="form-control" name="inf_other_text"></div>
+                                <div class="col-md-6">
+                                    <label class="form-label">病原学证据阴性</label>
+                                    <select class="form-select" name="culture_neg">
+                                        <option value="0">否 (有病原体)</option>
+                                        <option value="1">是 (阴性)</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6"><label class="form-label">检出病原体</label><input type="text" class="form-control" name="pathogen"></div>
+                                <div class="col-md-6">
+                                    <label class="form-label">多重耐药菌(MDR)</label>
+                                    <select class="form-select" name="mdr">
+                                        <option value="0">否</option>
+                                        <option value="1">是</option>
+                                        <option value="2">未知</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="row g-2">
+                                <div class="col-md-4"><label class="form-label">SOFA评分</label><input type="number" class="form-control" name="sofa" step="1"></div>
+                                <div class="col-md-4"><label class="form-label">APACHE II</label><input type="number" class="form-control" name="apache2" step="1"></div>
+                                <div class="col-md-4"><label class="form-label">qSOFA</label><input type="number" class="form-control" name="qsofa" step="1"></div>
+                                <div class="col-md-6"><label class="form-label">脓毒症诊断时间</label><input type="datetime-local" class="form-control" name="dx_time"></div>
+                                <div class="col-md-6"><label class="form-label">基线血样采集时间</label><input type="datetime-local" class="form-control" name="blood_time"></div>
+                            </div>
+                        </div>
+
+                        <!-- ========= 实验室指标 ========= -->
+                        <div class="mb-4">
+                            <h6 class="fw-bold text-secondary"><i class="fas fa-flask me-2"></i>C. 基线实验室指标</h6>
+                            <div class="row g-2">
+                                <div class="col-md-3"><label>WBC(×10⁹/L)</label><input class="form-control" name="wbc"></div>
+                                <div class="col-md-3"><label>Neu%</label><input class="form-control" name="neut"></div>
+                                <div class="col-md-3"><label>Hb(g/L)</label><input class="form-control" name="hb"></div>
+                                <div class="col-md-3"><label>PLT(×10⁹/L)</label><input class="form-control" name="plt"></div>
+                                <div class="col-md-3"><label>PCT(ng/mL)</label><input class="form-control" name="pct"></div>
+                                <div class="col-md-3"><label>CRP(mg/L)</label><input class="form-control" name="crp"></div>
+                                <div class="col-md-3"><label>IL-6(pg/mL)</label><input class="form-control" name="il6"></div>
+                                <div class="col-md-3"><label>Cr(μmol/L)</label><input class="form-control" name="cr"></div>
+                                <div class="col-md-3"><label>BUN(mmol/L)</label><input class="form-control" name="bun"></div>
+                                <div class="col-md-3"><label>ALT(U/L)</label><input class="form-control" name="alt"></div>
+                                <div class="col-md-3"><label>AST(U/L)</label><input class="form-control" name="ast"></div>
+                                <div class="col-md-3"><label>TBil(μmol/L)</label><input class="form-control" name="tbil"></div>
+                                <div class="col-md-3"><label>ALB(g/L)</label><input class="form-control" name="alb"></div>
+                                <div class="col-md-3"><label>PT(s)</label><input class="form-control" name="pt"></div>
+                                <div class="col-md-3"><label>APTT(s)</label><input class="form-control" name="aptt"></div>
+                                <div class="col-md-3"><label>D-Dimer(mg/L)</label><input class="form-control" name="d_dimer"></div>
+                                <div class="col-md-3"><label>FIB(g/L)</label><input class="form-control" name="fib"></div>
+                                <div class="col-md-3"><label>Lac(mmol/L)</label><input class="form-control" name="lac"></div>
+                                <div class="col-md-3"><label>pH</label><input class="form-control" name="ph"></div>
+                                <div class="col-md-3"><label>氧合指数(mmHg)</label><input class="form-control" name="pf"></div>
+                                <div class="col-md-3"><label>PCO₂(mmHg)</label><input class="form-control" name="pco2"></div>
+                            </div>
+                        </div>
+
+                        <!-- ========= 治疗 ========= -->
+                        <div class="mb-4">
+                            <h6 class="fw-bold text-secondary"><i class="fas fa-syringe me-2"></i>D. 治疗措施</h6>
+                            <div class="row g-2">
+                                <div class="col-md-6"><label>初始抗生素方案</label><input class="form-control" name="abx_initial"></div>
+                                <div class="col-md-6"><label>后续目标方案</label><input class="form-control" name="abx_target"></div>
+                                <div class="col-md-3"><label>血管活性药</label><select class="form-select" name="vaso"><option value="0">未使用</option><option value="1">使用</option></select></div>
+                                <div class="col-md-3"><label>机械通气</label><select class="form-select" name="vent"><option value="0">未使用</option><option value="1">无创通气</option><option value="2">有创通气</option></select></div>
+                                <div class="col-md-3"><label>有创通气天数</label><input class="form-control" name="vent_days"></div>
+                                <div class="col-md-3"><label>RRT类型</label><select class="form-select" name="rrt"><option value="0">未使用</option><option value="1">间歇性HD</option><option value="2">CRRT</option></select></div>
+                                <div class="col-md-3"><label>RRT持续时间(天)</label><input class="form-control" name="rrt_days"></div>
+                            </div>
+                        </div>
+
+                        <!-- ========= 结局 ========= -->
+                        <div class="mb-4">
+                            <h6 class="fw-bold text-secondary"><i class="fas fa-heartbeat me-2"></i>E. 临床结局</h6>
+                            <div class="row g-2">
+                                <div class="col-md-4"><label>28天生存状态</label><select class="form-select" name="surv28"><option value="0">生存</option><option value="1">死亡</option></select></div>
+                                <div class="col-md-4"><label>死亡日期</label><input type="date" class="form-control" name="death_date"></div>
+                                <div class="col-md-4"><label>住院最终结局</label><select class="form-select" name="final_outcome"><option value="1">治愈出院</option><option value="2">好转出院</option><option value="3">死亡</option><option value="4">自动出院</option></select></div>
+                                <div class="col-12"><label>并发症/新发器官功能障碍</label><input class="form-control" name="complications"></div>
+                            </div>
+                        </div>
+
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <button type="button" class="btn btn-outline-secondary" id="clearFormBtn"><i class="fas fa-undo-alt me-1"></i>清空表单</button>
+                            <button type="submit" class="btn btn-primary"><i class="fas fa-save me-1"></i>保存病人数据</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- 右侧：统计 & 列表 (占5/12) -->
+            <div class="col-lg-5">
+                <!-- 统计卡片 -->
+                <div class="form-section">
+                    <h5 class="section-title"><i class="fas fa-chart-pie me-2"></i>实时统计</h5>
+                    <div class="row g-3 text-center">
+                        <div class="col-6 col-md-4">
+                            <div class="stat-card">
+                                <div class="stat-value" id="statTotal">0</div>
+                                <div class="stat-label">总人数</div>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-4">
+                            <div class="stat-card">
+                                <div class="stat-value" id="statAvgAge">-</div>
+                                <div class="stat-label">平均年龄</div>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-4">
+                            <div class="stat-card">
+                                <div class="stat-value" id="statMaleRatio">0%</div>
+                                <div class="stat-label">男性占比</div>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-4">
+                            <div class="stat-card">
+                                <div class="stat-value" id="statMortality">0%</div>
+                                <div class="stat-label">28天死亡率</div>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-4">
+                            <div class="stat-card">
+                                <div class="stat-value" id="statAvgSOFA">0</div>
+                                <div class="stat-label">平均SOFA</div>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-4">
+                            <div class="stat-card">
+                                <div class="stat-value" id="statTopInf">-</div>
+                                <div class="stat-label">最常见感染部位</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 已录入病人列表 (带查看按钮) -->
+                <div class="form-section">
+                    <h5 class="section-title"><i class="fas fa-list me-2"></i>已录入病人</h5>
+                    <div style="max-height: 400px; overflow-y: auto;">
+                        <table class="table table-sm table-hover table-patient-list">
+                            <thead class="table-light">
+                                <tr><th>姓名</th><th>年龄</th><th>性别</th><th>SOFA</th><th>28天结局</th><th style="width:85px">操作</th></tr>
+                            </thead>
+                            <tbody id="patientTableBody">
+                                <!-- 动态生成 -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="d-flex justify-content-between mt-2">
+                        <small class="text-secondary" id="listCount">0 条记录</small>
+                        <button class="btn btn-outline-danger btn-sm" id="clearAllBtn"><i class="fas fa-trash-alt me-1"></i>清除所有数据</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="footer-note">
+            <i class="far fa-save me-1"></i> 数据自动保存在您的浏览器中 (localStorage) · 点击“查看”可浏览完整病例
+        </div>
+    </div>
+
+    <!-- 详情查看模态框 -->
+    <div class="modal fade" id="detailModal" tabindex="-1" aria-labelledby="detailModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="detailModalLabel"><i class="fas fa-file-medical me-2"></i>病人完整病例报告</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="关闭"></button>
+                </div>
+                <div class="modal-body" id="modalDetailContent">
+                    <!-- 动态填充 -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript 逻辑 -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        (function() {
+            // 读取本地存储
+            let patients = JSON.parse(localStorage.getItem('sepsis_patients')) || [];
+
+            // Bootstrap模态框实例
+            const detailModal = new bootstrap.Modal(document.getElementById('detailModal'));
+
+            // 辅助: 保存到localStorage
+            function savePatients() {
+                localStorage.setItem('sepsis_patients', JSON.stringify(patients));
+            }
+
+            // 将字段值转为可读文本 (用于详情显示)
+            function formatValue(key, value) {
+                if (value === undefined || value === null || value === '') return '<span class="text-secondary">未记录</span>';
+                // 处理复选框类 (0/1)
+                if (['htn','dm','copd','asthma','ckd','malignancy','cvd','immuno','inf_lung','inf_abdo','inf_urinary','inf_blood','inf_skin','inf_cns','inf_other'].includes(key)) {
+                    return value == '1' ? '是' : '否';
+                }
+                // 性别
+                if (key === 'gender') {
+                    if (value == '0') return '男';
+                    if (value == '1') return '女';
+                    return '未填';
+                }
+                // 病原学阴性
+                if (key === 'culture_neg') return value == '1' ? '是' : '否';
+                // MDR
+                if (key === 'mdr') {
+                    if (value == '0') return '否';
+                    if (value == '1') return '是';
+                    if (value == '2') return '未知';
+                }
+                // 血管活性药
+                if (key === 'vaso') return value == '1' ? '使用' : '未使用';
+                // 机械通气
+                if (key === 'vent') {
+                    if (value == '0') return '未使用';
+                    if (value == '1') return '无创通气';
+                    if (value == '2') return '有创通气';
+                }
+                // RRT类型
+                if (key === 'rrt') {
+                    if (value == '0') return '未使用';
+                    if (value == '1') return '间歇性HD';
+                    if (value == '2') return 'CRRT';
+                }
+                // 28天生存
+                if (key === 'surv28') return value == '1' ? '死亡' : '生存';
+                // 住院最终结局
+                if (key === 'final_outcome') {
+                    if (value == '1') return '治愈出院';
+                    if (value == '2') return '好转出院';
+                    if (value == '3') return '死亡';
+                    if (value == '4') return '自动出院';
+                }
+                return value;
+            }
+
+            // 显示详情模态框
+            window.showPatientDetail = function(index) {
+                const p = patients[index];
+                if (!p) return;
+
+                // 定义分组显示顺序 (美观)
+                const sections = [
+                    { title: '📋 人口统计学', fields: ['name','gender','age','height','weight','bmi','htn','dm','copd','asthma','ckd','malignancy','cvd','immuno'] },
+                    { title: '🦠 脓毒症诊断', fields: ['inf_lung','inf_abdo','inf_urinary','inf_blood','inf_skin','inf_cns','inf_other','inf_other_text','culture_neg','pathogen','mdr','sofa','apache2','qsofa','dx_time','blood_time'] },
+                    { title: '🧪 实验室指标', fields: ['wbc','neut','hb','plt','pct','crp','il6','cr','bun','alt','ast','tbil','alb','pt','aptt','d_dimer','fib','lac','ph','pf','pco2'] },
+                    { title: '💊 治疗措施', fields: ['abx_initial','abx_target','vaso','vent','vent_days','rrt','rrt_days'] },
+                    { title: '🏥 临床结局', fields: ['surv28','death_date','final_outcome','complications'] }
+                ];
+
+                let html = '';
+                sections.forEach(section => {
+                    html += `<h6 class="mt-3 mb-2 detail-label">${section.title}</h6><div class="row">`;
+                    section.fields.forEach(field => {
+                        let displayValue = formatValue(field, p[field]);
+                        // 中文标签映射（简单映射，若需要可完善）
+                        let labelMap = {
+                            name:'姓名', gender:'性别', age:'年龄', height:'身高(cm)', weight:'体重(kg)', bmi:'BMI',
+                            htn:'高血压', dm:'糖尿病', copd:'COPD', asthma:'哮喘', ckd:'慢性肾病', malignancy:'恶性肿瘤', cvd:'脑血管疾病', immuno:'免疫抑制',
+                            inf_lung:'肺部感染', inf_abdo:'腹腔感染', inf_urinary:'泌尿感染', inf_blood:'血流感染', inf_skin:'皮肤软组织', inf_cns:'中枢神经', inf_other:'其他感染',
+                            inf_other_text:'其他部位详述', culture_neg:'病原学阴性', pathogen:'病原体', mdr:'多重耐药菌',
+                            sofa:'SOFA', apache2:'APACHE II', qsofa:'qSOFA', dx_time:'诊断时间', blood_time:'血样时间',
+                            wbc:'WBC', neut:'Neu%', hb:'Hb', plt:'PLT', pct:'PCT', crp:'CRP', il6:'IL-6', cr:'Cr', bun:'BUN',
+                            alt:'ALT', ast:'AST', tbil:'TBil', alb:'ALB', pt:'PT', aptt:'APTT', d_dimer:'D-二聚体', fib:'FIB',
+                            lac:'乳酸', ph:'pH', pf:'氧合指数', pco2:'PCO₂',
+                            abx_initial:'初始抗生素', abx_target:'后续抗生素', vaso:'血管活性药', vent:'机械通气', vent_days:'有创通气天数',
+                            rrt:'RRT类型', rrt_days:'RRT天数',
+                            surv28:'28天生存', death_date:'死亡日期', final_outcome:'住院结局', complications:'并发症'
+                        };
+                        let chineseLabel = labelMap[field] || field;
+                        html += `<div class="col-md-6"><strong>${chineseLabel}:</strong> ${displayValue}</div>`;
+                    });
+                    html += '</div><hr>';
+                });
+
+                document.getElementById('modalDetailContent').innerHTML = html;
+                detailModal.show();
+            }
+
+            // 渲染右侧统计和表格
+            function refreshDisplay() {
+                // 统计
+                const total = patients.length;
+                document.getElementById('statTotal').innerText = total;
+                document.getElementById('listCount').innerText = total + ' 条记录';
+                document.getElementById('patientCountBadge').innerText = total + ' 位病人';
+
+                if (total === 0) {
+                    document.getElementById('statAvgAge').innerText = '-';
+                    document.getElementById('statMaleRatio').innerText = '0%';
+                    document.getElementById('statMortality').innerText = '0%';
+                    document.getElementById('statAvgSOFA').innerText = '0';
+                    document.getElementById('statTopInf').innerText = '-';
+                    document.getElementById('patientTableBody').innerHTML = '<tr><td colspan="6" class="text-center text-muted py-3">暂无病人数据</td></tr>';
+                    return;
+                }
+
+                // 平均年龄
+                let sumAge = 0, ageCount = 0;
+                let male = 0, female = 0;
+                let sumSOFA = 0, sofaCount = 0;
+                let death28 = 0;
+                // 感染部位计数
+                let infCount = { lung:0, abdo:0, urinary:0, blood:0, skin:0, cns:0, other:0 };
+
+                patients.forEach(p => {
+                    if (p.age && !isNaN(p.age)) { sumAge += +p.age; ageCount++; }
+                    if (p.gender == 0) male++; else if (p.gender == 1) female++;
+                    if (p.sofa && !isNaN(p.sofa)) { sumSOFA += +p.sofa; sofaCount++; }
+                    if (p.surv28 == 1) death28++;
+
+                    // 感染部位计数
+                    if (p.inf_lung == '1' || p.inf_lung === 1) infCount.lung++;
+                    if (p.inf_abdo == '1') infCount.abdo++;
+                    if (p.inf_urinary == '1') infCount.urinary++;
+                    if (p.inf_blood == '1') infCount.blood++;
+                    if (p.inf_skin == '1') infCount.skin++;
+                    if (p.inf_cns == '1') infCount.cns++;
+                    if (p.inf_other == '1') infCount.other++;
+                });
+
+                const avgAge = (sumAge / ageCount).toFixed(1);
+                const malePercent = ((male / total)*100).toFixed(1) + '%';
+                const mortality = ((death28 / total)*100).toFixed(1) + '%';
+                const avgSOFA = sofaCount ? (sumSOFA / sofaCount).toFixed(1) : '0';
+
+                // 最常见感染部位
+                let maxInf = '无';
+                let maxVal = 0;
+                for (let [key, val] of Object.entries(infCount)) {
+                    if (val > maxVal) { maxVal = val; maxInf = key; }
+                }
+                const infNameMap = { lung:'肺部', abdo:'腹腔', urinary:'泌尿', blood:'血流', skin:'皮肤', cns:'中枢', other:'其他' };
+                const topInf = infNameMap[maxInf] || '-';
+
+                document.getElementById('statAvgAge').innerText = avgAge;
+                document.getElementById('statMaleRatio').innerText = malePercent;
+                document.getElementById('statMortality').innerText = mortality;
+                document.getElementById('statAvgSOFA').innerText = avgSOFA;
+                document.getElementById('statTopInf').innerText = topInf;
+
+                // 渲染表格 (增加查看按钮)
+                let html = '';
+                patients.slice().reverse().forEach((p, idx) => {  // 倒序显示最新的在上
+                    // 计算原始索引 (因为reverse了)
+                    const originalIndex = patients.length - 1 - idx;
+                    const genderTxt = p.gender == 0 ? '男' : (p.gender == 1 ? '女' : '-');
+                    const survTxt = p.surv28 == 1 ? '<span class="badge bg-danger">死亡</span>' : '<span class="badge bg-success">生存</span>';
+                    html += `<tr>
+                        <td>${p.name || '无名'}</td>
+                        <td>${p.age || '-'}</td>
+                        <td>${genderTxt}</td>
+                        <td>${p.sofa || '-'}</td>
+                        <td>${survTxt}</td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-primary py-0 me-1" onclick="showPatientDetail(${originalIndex})" title="查看详情"><i class="fas fa-eye"></i></button>
+                            <button class="btn btn-outline-danger btn-sm py-0" onclick="deletePatient(${originalIndex})" title="删除"><i class="fas fa-times"></i></button>
+                        </td>
+                    </tr>`;
+                });
+                document.getElementById('patientTableBody').innerHTML = html;
+            }
+
+            // 删除单条记录
+            window.deletePatient = function(index) {
+                if (index >= 0 && index < patients.length) {
+                    patients.splice(index, 1);
+                    savePatients();
+                    refreshDisplay();
+                }
+            }
+
+            // 清空所有数据
+            document.getElementById('clearAllBtn').addEventListener('click', function() {
+                if (confirm('永久删除所有病人记录？')) {
+                    patients = [];
+                    savePatients();
+                    refreshDisplay();
+                }
+            });
+
+            // 清空表单
+            document.getElementById('clearFormBtn').addEventListener('click', function() {
+                document.getElementById('patientForm').reset();
+            });
+
+            // 处理表单提交
+            document.getElementById('patientForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                const form = e.target;
+                const formData = new FormData(form);
+                let patient = {};
+
+                for (let [key, value] of formData.entries()) {
+                    patient[key] = value;
+                }
+
+                // 手动处理复选框 (未选中的设为0)
+                const checkboxNames = ['htn','dm','copd','asthma','ckd','malignancy','cvd','immuno','inf_lung','inf_abdo','inf_urinary','inf_blood','inf_skin','inf_cns','inf_other'];
+                checkboxNames.forEach(name => {
+                    if (!(name in patient)) patient[name] = '0';
+                });
+
+                // 性别单选如果没有选，默认设为空
+                if (!patient.gender) patient.gender = '';
+
+                patients.push(patient);
+                savePatients();
+                refreshDisplay();
+                form.reset();
+            });
+
+            // 初始显示
+            refreshDisplay();
+        })();
+    </script>
+</body>
+</html>
